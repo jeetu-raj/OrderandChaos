@@ -1,5 +1,5 @@
 # README #
-
+Change
 Welcome to the Entropy AI tournament manager. 
 For rules of the game visit : [wikipedia: entropy board game](https://en.wikipedia.org/wiki/Entropy_(1977_board_game))
 

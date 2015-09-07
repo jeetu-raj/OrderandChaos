@@ -71,9 +71,9 @@ def isValidMoveByOrder(a, b, c, d):
 	if (a != c and b != d):
 		return False
 	
-	if (a == c and b == d):
-		# is it a valid move to pass? - idk
-		return False
+	# if (a == c and b == d):
+	# 	# is it a valid move to pass? - idk
+	# 	return False
 		
 	if (a == c):
 		for col in range(b+1, d):
@@ -105,7 +105,10 @@ def makeOrderMove(a, b, c, d):
 	global board
 	if not isValidMoveByOrder(a, b, c, d):
 		return False
-		
+	
+	if (a == c and b == d):
+		return True
+
 	board[c][d] = board[a][b]
 	board[a][b] = '-'
 	return True

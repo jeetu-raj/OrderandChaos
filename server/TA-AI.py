@@ -116,6 +116,8 @@ def makeChaosMove(x, y, color):
 # returns if the move was successful or not
 def makeOrderMove(a, b, c, d):
 	global board	
+	if (a == c and b == d):
+		return
 	board[c][d] = board[a][b]
 	board[a][b] = '-'
 	return True

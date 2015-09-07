@@ -7,6 +7,7 @@
 
 import json
 
+TEXTCONV = {'A': 'R', 'B': 'C', 'C': 'G','D':'B', 'E':'Y', '-':'-'}
 class HumanSocket:
 	def __init__(self):
 		pass
@@ -17,7 +18,11 @@ class HumanSocket:
 			return
 		
 		dct = json.loads(msg)
-		
+
+		if 'payload' in dct and 'ORDER' not in dct['payload'] and 'CHAOS' not in dct['payload']:
+			for a in TEXTCONV:
+				dct['payload'] = dct['payload'].replace(a, TEXTCONV[a])
+
 		if (dct['purpose'] == 'reset'):
 			self.reset = 0
 			pass

@@ -43,7 +43,7 @@ def letClientsJoin():
 	sock.listen(1)
 	print ('Listening on %s:%d for clients for 20s' % (hostname, port))
 	signal.signal(signal.SIGALRM, lambda x: (_ for _ in ()).throw(Exception('TimeOut')) )
-	signal.alarm(20)
+	signal.alarm(50)
 	try:
 		while True:
 			# Wait for connections
@@ -53,7 +53,7 @@ def letClientsJoin():
 			# conn.setblocking(1)
 			print('Bot ' + botname + ' connected')
 			connections.append((conn, addr, botname))
-			if (len(connections) >= int(config.get('max_clients') or 20) ):
+			if (len(connections) >= int(config.get('max_clients') or 50) ):
 				raise Exception('TimeOut')
 	except:
 		print (sys.exc_info()[0])

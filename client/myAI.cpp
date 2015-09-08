@@ -2,10 +2,13 @@
 
 #include "stdc++.h"
 #define FOR(i, n) for(int i=0; i<n; i++)
+#define maxLevelToSearch 4
 using namespace std;
 
 int N;
 char board[5][5];
+int numVacantSpots;
+
 
 struct orderMove
 {
@@ -23,6 +26,16 @@ struct chaosMove
 	char color;
 };
 
+struct colorInfo
+{
+	int numRemaining;
+	char color;
+};
+
+orderMove nextOrderMove;
+chaosMove nextChaosMove;
+std::vector<colorInfo> colors;
+
 void init() ;
 vector< orderMove > getPossibleOrderMoves(int x, int y);
 void makeChaosMove(chaosMove move); // Executes chaos' move
@@ -34,11 +47,17 @@ void playAsChaos();
 bool isOk(int x,int row);
 int calculateScore();
 int scoreHelp(int row);
+float chance(int level);
+float maxVal(int level); // Order's move
+float minVal(int level,char color);  // As of now this is not keeping track of the which move lead to minimum but it should
+
 bool isGameOver();
 
 int main() 
 {
-	cin>>N;	init();
+	cin>>N;	
+	init();
+	cout<<"Score:"<<calculateScore()<<endl;
 	string s;	cin>>s;
 	// fprintf(stdout, "Testing correctnes\n");
 	if (s.compare("ORDER") == 0) {
@@ -49,6 +68,7 @@ int main()
 	return 0;
 }
 
+
 void init() 
 {
 	FOR(i, N){
@@ -56,12 +76,22 @@ void init()
 			board[i][j] = '-';
 		}
 	}
+	numVacantSpots= N*N;
+	colors.resize(N);
+	for(int i = 0;i<N;i++)
+	{
+		colors[i].numRemaining 	= N;
+		colors[i].color 		= (char)(65+i);
+	}
 }
 
 void makeChaosMove(chaosMove move) // Executes chaos' move
 {
-	//
-	board[move.x][move.y] = move.color;
+	if(board[move.x][move.y]=='-')  // Just to make sure that chaos' move was valid
+	{
+		numVacantSpots--;	
+		board[move.x][move.y] = move.color;
+	}
 }
 
 void makeOrderMove(orderMove move)// Executes order's move
@@ -73,6 +103,28 @@ void makeOrderMove(orderMove move)// Executes order's move
 			board[move.x2][move.y2] = board[move.x1][move.y1];
 			board[move.x1][move.y1] = '-';
 		}	
+	}
+}
+
+void undoOrderMove(orderMove move)// Test if it works
+{
+	int temp;
+	temp 	= move.x1;
+	move.x2 = move.x1;
+	move.x1 = temp;
+
+	temp 	= move.y1;
+	move.y2 = move.y1;
+	move.y1 = temp;
+	makeOrderMove(move);
+}
+
+void undoChaosMove(chaosMove move)
+{
+	if(board[move.x][move.y]!='-')  // Just to make sure that chaos' move is undone properly..
+	{
+		numVacantSpots++;
+		board[move.x][move.y] = '-';
 	}
 }
  
@@ -200,12 +252,12 @@ void playAsOrder()
 	// file.close();
 }
 
-void playAsChaos() 
+void playAsChaos()// Replace first mve with some intelligent start point 
 {
 	orderMove oMove;
 	chaosMove cMove;
 	int a, b, c, d; char color;
-	cin>>color;
+	cin>>color;	
 	cout<<"0 0"<<endl;	// First move :D
 	board[0][0] = color;
 	for(int i=0;i<N*N-1;i++)
@@ -323,4 +375,122 @@ int calculateScore()
 		}
 	}
 	return score;
+}
+
+vector<orderMove> getAllPossibleOrderMoves()
+{
+	std::vector<orderMove> allMoves;
+	for(int i=0;i<N;i++)
+	{
+		for(int j=0;j<N;j++)
+		{
+			if(board[i][j]!='-')
+			{
+				std::vector<orderMove> temp = getPossibleOrderMoves(i,j);
+				allMoves.insert(allMoves.begin(),temp.begin(),temp.end());
+			}
+		}
+	}
+	return allMoves;
+}
+
+
+float maxVal(int level) // Order's move
+{
+	if(level > 0 && numVacantSpots>0)// Leaf node is not reached at
+	{
+		vector<orderMove> allMoves = getAllPossibleOrderMoves();
+		float maxSoFar = 0 ,tempMax = 0;
+		int bestChild  = -1;
+		int size 	   = allMoves.size();
+		for(int iter=0 ; iter<size ; iter++)
+		{ 	
+			makeOrderMove(allMoves[iter]);
+			tempMax = chance(level-1);// Now iterate over children
+			if(tempMax>maxSoFar)
+			{
+				// store the solution
+				maxSoFar = tempMax;
+				bestChild = iter;
+			}
+			undoOrderMove(allMoves[iter]);
+		}
+		nextOrderMove = allMoves[bestChild];
+		return maxSoFar;
+	}
+	else if(numVacantSpots == 0) // Now we'll use scoring fuction instead of heuristic based eval function
+	{
+		return (float)calculateScore();
+	}
+	else // Use the eval funtion tha makes use of various features
+	{
+		return (float)calculateScore(); // This has to be replaced with feature based function
+	}
+}
+
+float minVal(int level,char color)  // As of now this is not keeping track of the which move lead to minimum but it should
+{
+	if(level>0 && numVacantSpots>0)
+	{
+		chaosMove tempMove;
+		float minSoFar = 100000.0;
+		float tempMin  = 0.0;
+		chaosMove bestMove;
+		for(int i=0;i<N;i++)
+		{
+			for(int j=0;j<N;j++)
+			{
+				if(board[i][j]=='-')
+				{
+					tempMove.x 		= i;
+					tempMove.y 		= j;
+					tempMove.color  = color;
+					makeChaosMove(tempMove);
+
+					tempMin = maxVal(level-1);
+					if(tempMin < minSoFar)
+					{
+						minSoFar = tempMin;
+						bestMove = tempMove;
+					}
+					undoChaosMove(tempMove);
+				}
+			}
+		}
+		nextChaosMove = bestMove; // This is to store the next move to make by the player ..
+		return minSoFar;
+	}
+	else if(numVacantSpots==0) // It is the leaf node so does not have to do any min max
+	{
+		return (float)calculateScore();
+	}else // in case of cutoff at intermediate level , we have to use feature based function in this case
+	{
+		return (float)calculateScore();
+	}
+}
+
+float chance(int level)
+{
+	float expectation = 0.0;
+	for(int i=0 ; i<N ; i++)
+	{
+		// Note that here we are not decrementing value of level as it makes no sense to cutoff at a chance node
+		float tempProb = (float)(colors[i].numRemaining);
+		tempProb = tempProb / ((float)numVacantSpots);
+		expectation +=  tempProb * (float)(minVal(level, colors[i].color));
+	}
+	return expectation;
+}
+
+int expectiMiniMax(string nodeType,int level) // No additional parameter need to be passed as the configuration of 
+									 // board is changed and undo after each iteration of sub-tree
+{
+	/*
+	TODO -- start maxSoFar , minSoFar from infinity .. define infinity
+	  Return also the configuration that returned the most optimal path.. This would be necessary in making actual move
+	  Also keep track of how many levels further down do i need to go to
+
+	  level cant get down to 0 when the node for which expectiminimax is being called is chance node
+	*/	
+	  return 1;
 }

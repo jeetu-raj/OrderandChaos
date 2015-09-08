@@ -1,6 +1,6 @@
 #!/bin/bash
-# python -u myAI.py
+python -u myAI.py
 
 # FOR c++
-g++ myAI.cpp
-./a.out
+# g++ myAI.cpp
+# ./a.out

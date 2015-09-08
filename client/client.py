@@ -94,7 +94,7 @@ while True:
 		continue
 	
 	dct = json.loads(data)
-	# print 'packet recv:', dct
+	print 'packet recv:', dct
 	
 	if (dct['purpose'] == 'reset'):
 		safety_count = 0

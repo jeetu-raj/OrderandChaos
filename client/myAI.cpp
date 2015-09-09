@@ -2,7 +2,7 @@
 
 #include "stdc++.h"
 #define FOR(i, n) for(int i=0; i<n; i++)
-#define maxLevelToSearch 4
+#define maxLevelToSearch 2
 using namespace std;
 
 int N;
@@ -35,7 +35,7 @@ struct colorInfo
 orderMove nextOrderMove;
 chaosMove nextChaosMove;
 std::vector<colorInfo> colors;
-
+void print();
 void init() ;
 vector< orderMove > getPossibleOrderMoves(int x, int y);
 void makeChaosMove(chaosMove move); // Executes chaos' move
@@ -57,9 +57,7 @@ int main()
 {
 	cin>>N;	
 	init();
-	cout<<"Score:"<<calculateScore()<<endl;
 	string s;	cin>>s;
-	// fprintf(stdout, "Testing correctnes\n");
 	if (s.compare("ORDER") == 0) {
 		playAsOrder();
 	} else {
@@ -87,10 +85,15 @@ void init()
 
 void makeChaosMove(chaosMove move) // Executes chaos' move
 {
-	if(board[move.x][move.y]=='-')  // Just to make sure that chaos' move was valid
+	if(board[move.x][move.y]=='-' && move.color!='-')  // Just to make sure that chaos' move was valid
 	{
 		numVacantSpots--;	
 		board[move.x][move.y] = move.color;
+		colors[((int)(move.color)-65)].numRemaining--;
+	}
+	else
+	{
+		fprintf(stderr, "IllegalMove by Chaos at: %d , %d ::%c-->%c\n",move.x,move.y,move.color,board[move.x][move.y]);
 	}
 }
 
@@ -102,7 +105,15 @@ void makeOrderMove(orderMove move)// Executes order's move
 		{	
 			board[move.x2][move.y2] = board[move.x1][move.y1];
 			board[move.x1][move.y1] = '-';
-		}	
+		}
+	}
+	else
+	{
+		fprintf(stderr, "Illegal Move made by order (Dest not empty): %d ,%d ,%d ,%d\n",move.x1,move.y1,move.x2,move.y2);
+	}
+	if(move.x1 != move.x2 && move.y1 != move.y2)
+	{
+		fprintf(stderr, "Illegal Move made by order (Not in same row/column): %d ,%d ,%d ,%d\n",move.x1,move.y1,move.x2,move.y2);	
 	}
 }
 
@@ -110,44 +121,54 @@ void undoOrderMove(orderMove move)// Test if it works
 {
 	int temp;
 	temp 	= move.x1;
-	move.x2 = move.x1;
-	move.x1 = temp;
+	move.x1 = move.x2;
+	move.x2 = temp;
 
 	temp 	= move.y1;
-	move.y2 = move.y1;
-	move.y1 = temp;
+	move.y1 = move.y2;
+	move.y2 = temp;
+	// fprintf(stderr, "Undoing order's move..\n");
 	makeOrderMove(move);
 }
 
 void undoChaosMove(chaosMove move)
 {
-	if(board[move.x][move.y]!='-')  // Just to make sure that chaos' move is undone properly..
+	if(board[move.x][move.y]!='-' && board[move.x][move.y]==move.color)  // Just to make sure that chaos' move is undone properly..
 	{
 		numVacantSpots++;
+		char c = board[move.x][move.y];
+		colors[((int)(c)-65)].numRemaining++;
 		board[move.x][move.y] = '-';
+	}
+	else
+	{
+		fprintf(stderr, "Invalid undoing chaos move at: %d,%d colors: %c-->%c\n",move.x,move.y,move.color,board[move.x][move.y]);
 	}
 }
  
 chaosMove findChaosMove(char color) // Use something intelligent here
 {
-	chaosMove move;
-	move.x = 0;
-	move.y = 0;
-	move.color = color;
-	for(int i=0;i<N;i++)
-	{
-		for(int j=0;j<N;j++)
-		{
-			if (board[i][j] == '-')
-			{
-				move.x 		= i;
-				move.y 		= j;
-				move.color 	= color;
-				return move;
-			}
-		}
-	}
-	throw "No Move for chaos\n";
+	float score = minVal(maxLevelToSearch,color);
+	fprintf(stderr, "MinScore:%f\n",score );
+	return nextChaosMove;
+	// chaosMove move;
+	// move.x = 0;
+	// move.y = 0;
+	// move.color = color;
+	// for(int i=0;i<N;i++)
+	// {
+	// 	for(int j=0;j<N;j++)
+	// 	{
+	// 		if (board[i][j] == '-')
+	// 		{
+	// 			move.x 		= i;
+	// 			move.y 		= j;
+	// 			move.color 	= color;
+	// 			return move;
+	// 		}
+	// 	}
+	// }
+	// throw "No Move for chaos\n";
 }
 
 vector< orderMove > getPossibleOrderMoves(int x, int y)
@@ -208,21 +229,24 @@ vector< orderMove > getPossibleOrderMoves(int x, int y)
 
 orderMove findOrderMove()
 {
-	for(int i=0;i<N;i++)
-	{
-		for(int j=0;j<N;j++)
-		{
-			if(board[i][j]!='-')
-			{
-				std::vector< orderMove > possibleMoves = getPossibleOrderMoves(i,j);
-				if(possibleMoves.size()>0)
-				{
-					return possibleMoves[0];
-				}
-			}
-		}
-	}
-	throw "No Move available\n";
+	float temp = maxVal(maxLevelToSearch);	
+	fprintf(stderr, "MaxScore:%f\n",temp );
+	return nextOrderMove;
+	// for(int i=0;i<N;i++)
+	// {
+	// 	for(int j=0;j<N;j++)
+	// 	{
+	// 		if(board[i][j]!='-')
+	// 		{
+	// 			std::vector< orderMove > possibleMoves = getPossibleOrderMoves(i,j);
+	// 			if(possibleMoves.size()>0)
+	// 			{
+	// 				return possibleMoves[0];
+	// 			}
+	// 		}
+	// 	}
+	// }
+	// throw "No Move available\n";
 }
 
 void playAsOrder() 
@@ -260,6 +284,7 @@ void playAsChaos()// Replace first mve with some intelligent start point
 	cin>>color;	
 	cout<<"0 0"<<endl;	// First move :D
 	board[0][0] = color;
+	numVacantSpots--;
 	for(int i=0;i<N*N-1;i++)
 	{
 		cin >> oMove.x1 >> oMove.y1 >> oMove.x2 >> oMove.y2;
@@ -273,16 +298,11 @@ void playAsChaos()// Replace first mve with some intelligent start point
 		}
 		catch(string message)
 		{
+			fprintf(stderr, "%s\n",message);
 			// No move for chaos available
 		}
 	}
 	// cin>>a>>b>>c>>d;   Probably no need to take input from the server as all the blocks in the board are filled so order cant make a move
-
-
-	// fstream file;
-	// file.open("outPut.txt",ios::out|ios::app);
-	// file<<calculateScore();
-	// file.close();
 }
 
 bool isGameOver()
@@ -380,6 +400,7 @@ int calculateScore()
 vector<orderMove> getAllPossibleOrderMoves()
 {
 	std::vector<orderMove> allMoves;
+	allMoves.resize(0);
 	for(int i=0;i<N;i++)
 	{
 		for(int j=0;j<N;j++)
@@ -407,7 +428,7 @@ float maxVal(int level) // Order's move
 		{ 	
 			makeOrderMove(allMoves[iter]);
 			tempMax = chance(level-1);// Now iterate over children
-			if(tempMax>maxSoFar)
+			if(tempMax>=maxSoFar)
 			{
 				// store the solution
 				maxSoFar = tempMax;
@@ -424,6 +445,7 @@ float maxVal(int level) // Order's move
 	}
 	else // Use the eval funtion tha makes use of various features
 	{
+
 		return (float)calculateScore(); // This has to be replaced with feature based function
 	}
 }
@@ -434,7 +456,7 @@ float minVal(int level,char color)  // As of now this is not keeping track of th
 	{
 		chaosMove tempMove;
 		float minSoFar = 100000.0;
-		float tempMin  = 0.0;
+		float tempMin  = 100000.0;
 		chaosMove bestMove;
 		for(int i=0;i<N;i++)
 		{
@@ -446,9 +468,8 @@ float minVal(int level,char color)  // As of now this is not keeping track of th
 					tempMove.y 		= j;
 					tempMove.color  = color;
 					makeChaosMove(tempMove);
-
 					tempMin = maxVal(level-1);
-					if(tempMin < minSoFar)
+					if(tempMin <= minSoFar)
 					{
 						minSoFar = tempMin;
 						bestMove = tempMove;
@@ -493,4 +514,17 @@ int expectiMiniMax(string nodeType,int level) // No additional parameter need to
 	  level cant get down to 0 when the node for which expectiminimax is being called is chance node
 	*/	
 	  return 1;
+}
+
+void print()
+{
+	for(int i=0;i<N;i++)
+	{
+		for(int j=0;j<N;j++)
+		{
+			fprintf(stderr, "%c ",board[i][j]);
+		}
+		fprintf(stderr, "\n");
+	}
+	fprintf(stderr, "-----------------------------------");
 }

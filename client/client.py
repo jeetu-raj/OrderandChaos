@@ -13,14 +13,17 @@ import os
 sys.path.insert(0, os.path.realpath('../utils/'))
 from nbstreamreader import NonBlockingStreamReader as NBSR
 
-botname = 'bazook3a'	 # PLEASE CHOOSE A UNIQUE BOTNAME
+
 
 SAFETY_TIMEOUT = 65 # For dumb clients, who think too much or die while thinking
 server_address = 'localhost'
 server_port = 8000
 aiProc = None
 advStdout = None
+botname = 'bazookaC'	 # PLEASE CHOOSE A UNIQUE BOTNAME
 pathToRun = 'run.sh'
+# botname = 'bazookaPy'	 # PLEASE CHOOSE A UNIQUE BOTNAME
+# pathToRun = 'run2.sh'
 
 # print >>sys.stderr, repr(sys.argv)
 

@@ -20,10 +20,10 @@ server_address = 'localhost'
 server_port = 8000
 aiProc = None
 advStdout = None
-botname = 'bazookaC'	 # PLEASE CHOOSE A UNIQUE BOTNAME
+botname = 'Nishant'	 # PLEASE CHOOSE A UNIQUE BOTNAME
 pathToRun = 'run.sh'
-botname = 'bazookaPy'	 # PLEASE CHOOSE A UNIQUE BOTNAME
-pathToRun = 'run2.sh'
+# botname = 'Jeetu'	 # PLEASE CHOOSE A UNIQUE BOTNAME
+# pathToRun = 'run2.sh'
 
 # print >>sys.stderr, repr(sys.argv)
 
@@ -97,7 +97,7 @@ while True:
 		continue
 	
 	dct = json.loads(data)
-	print 'packet recv:', dct
+	# print 'packet recv:', dct
 	
 	if (dct['purpose'] == 'reset'):
 		safety_count = 0

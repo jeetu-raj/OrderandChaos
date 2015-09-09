@@ -2,7 +2,7 @@
 
 #include "stdc++.h"
 #define FOR(i, n) for(int i=0; i<n; i++)
-#define maxLevelToSearch 2
+#define maxLevelToSearch 7
 #define plusInfinity 100000.0
 #define minusInfinity -10000.0
 using namespace std;
@@ -215,20 +215,20 @@ chaosMove findChaosMove(char color) // Use something intelligent here
 {
 	float alpha = minusInfinity;
 	float beta 	= plusInfinity ;
-	// float score = minAlphaBeta(maxLevelToSearch,alpha,beta,color);	
-	// return nextChaosMoveAB;
-	float score = minVal(maxLevelToSearch,color);
-	return nextChaosMove;
+	float score = minAlphaBeta(maxLevelToSearch,alpha,beta,color);	
+	return nextChaosMoveAB;
+	// float score = minVal(maxLevelToSearch,color);
+	// return nextChaosMove;
 }
 
 orderMove findOrderMove()
 {
 	float alpha = minusInfinity;
 	float beta 	= plusInfinity ;
-	// float temp = maxAlphaBeta(maxLevelToSearch,alpha,beta);	
-	// return nextOrderMoveAB;
-	float temp = maxVal(maxLevelToSearch);	
-	return nextOrderMove;
+	float temp = maxAlphaBeta(maxLevelToSearch,alpha,beta);	
+	return nextOrderMoveAB;
+	// float temp = maxVal(maxLevelToSearch);	
+	// return nextOrderMove;
 }
 
 void playAsOrder() 
@@ -499,8 +499,7 @@ float maxAlphaBeta( int level , float &alpha , float &beta  )
 			{
 				bestMove = allMoves[ ind ];
 				maxVal = tempVal;
-			}
-			alpha = max(alpha,maxVal);
+ 			alpha = max(alpha,maxVal);
 			if(beta <= alpha)
 				break;
 
@@ -557,16 +556,16 @@ float minAlphaBeta( int level , float &alpha , float &beta ,  char color )
 					// if( minVal < alpha || beta < alpha )
 					// 	return alpha;
 				}
-				
+			}	
 				// if( minVal < beta )
 				// {
 				// 	nextChaosMoveAB = bestMove ;
 				// }
 				// return min( beta , minVal );
-			}
-			nextChaosMoveAB = bestMove;
-			return minVal;
 		}
+		nextChaosMoveAB = bestMove;
+		return minVal;
+
 	}
 	else if( numVacantSpots == 0 )
 	{

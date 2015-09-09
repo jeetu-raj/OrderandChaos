@@ -3,6 +3,8 @@
 #include "stdc++.h"
 #define FOR(i, n) for(int i=0; i<n; i++)
 #define maxLevelToSearch 2
+#define plusInfinity 100000
+#define minusInfinity -10000
 using namespace std;
 
 int N;
@@ -34,6 +36,14 @@ struct colorInfo
 
 orderMove nextOrderMove;
 chaosMove nextChaosMove;
+chaosMove nextChaosMoveAB;
+orderMove nextOrderMoveAB;
+float minimaxAlphaBeta( int level , float alpha1 , float beta1 , string levelType , char color );	
+float minAlphaBeta( int level , float alpha1 , float beta1 ,  char color )	;
+float maxAlphaBeta( int level , float alpha1 , float beta1  );
+float chanceAlphaBeta ( int level , float alpha , float beta );
+
+
 std::vector<colorInfo> colors;
 void print();
 void init() ;
@@ -145,31 +155,6 @@ void undoChaosMove(chaosMove move)
 		fprintf(stderr, "Invalid undoing chaos move at: %d,%d colors: %c-->%c\n",move.x,move.y,move.color,board[move.x][move.y]);
 	}
 }
- 
-chaosMove findChaosMove(char color) // Use something intelligent here
-{
-	float score = minVal(maxLevelToSearch,color);
-	fprintf(stderr, "MinScore:%f\n",score );
-	return nextChaosMove;
-	// chaosMove move;
-	// move.x = 0;
-	// move.y = 0;
-	// move.color = color;
-	// for(int i=0;i<N;i++)
-	// {
-	// 	for(int j=0;j<N;j++)
-	// 	{
-	// 		if (board[i][j] == '-')
-	// 		{
-	// 			move.x 		= i;
-	// 			move.y 		= j;
-	// 			move.color 	= color;
-	// 			return move;
-	// 		}
-	// 	}
-	// }
-	// throw "No Move for chaos\n";
-}
 
 vector< orderMove > getPossibleOrderMoves(int x, int y)
 {
@@ -227,26 +212,26 @@ vector< orderMove > getPossibleOrderMoves(int x, int y)
 	return possibleMoves;
 }
 
+ 
+chaosMove findChaosMove(char color) // Use something intelligent here
+{
+	float alpha = minusInfinity;
+	float beta = plusInfinity ;
+	float score = minAlphaBeta(maxLevelToSearch,minusInfinity,plusInfinity,color);	
+	//float score = minVal(maxLevelToSearch,color);
+	fprintf(stderr, "MinScore:%f\n",score );
+	return nextChaosMoveAB;
+}
+
 orderMove findOrderMove()
 {
-	float temp = maxVal(maxLevelToSearch);	
+	float alpha = minusInfinity;
+	float beta = plusInfinity ;
+	float temp = maxAlphaBeta(maxLevelToSearch,alpha,beta);	
+	//float temp = maxVal(maxLevelToSearch);	
 	fprintf(stderr, "MaxScore:%f\n",temp );
-	return nextOrderMove;
-	// for(int i=0;i<N;i++)
-	// {
-	// 	for(int j=0;j<N;j++)
-	// 	{
-	// 		if(board[i][j]!='-')
-	// 		{
-	// 			std::vector< orderMove > possibleMoves = getPossibleOrderMoves(i,j);
-	// 			if(possibleMoves.size()>0)
-	// 			{
-	// 				return possibleMoves[0];
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// throw "No Move available\n";
+	return nextOrderMoveAB;
+
 }
 
 void playAsOrder() 
@@ -298,7 +283,7 @@ void playAsChaos()// Replace first mve with some intelligent start point
 		}
 		catch(string message)
 		{
-			fprintf(stderr, "%s\n",message);
+			// fprintf(stderr, "%s\n",message);
 			// No move for chaos available
 		}
 	}
@@ -514,6 +499,125 @@ int expectiMiniMax(string nodeType,int level) // No additional parameter need to
 	*/	
 	  return 1;
 }
+
+
+float chanceAlphaBeta ( int level , float &alpha , float &beta )
+{
+	float expectation = 0.0;
+	for(int i=0 ; i<N ; i++)
+	{
+		float tempProb = (float)(colors[i].numRemaining);
+		tempProb = tempProb / ((float)numVacantSpots);
+		expectation +=  tempProb * ( float )( minAlphaBeta ( level , alpha , beta  , colors[i].color ) );
+	}
+	return expectation;
+}
+
+
+float maxAlphaBeta( int level , float &alpha , float &beta  )
+{
+ 
+	if( level > 0 && numVacantSpots > 0 )
+	{
+
+		orderMove bestMove ;
+		vector<orderMove> allMoves = getAllPossibleOrderMoves ( );
+		float maxVal = minusInfinity ;
+		for( int ind = 0 ; ind < allMoves.size ( ) ; ind++ )
+		{
+			makeOrderMove( allMoves[ ind ] );
+			float tempVal =chanceAlphaBeta( level-1 , alpha , beta );
+			if( tempVal > maxVal )
+			{
+				bestMove = allMoves[ ind ];
+				maxVal = tempVal;
+			}
+			undoOrderMove( allMoves[ ind ] );
+			if( maxVal > beta || alpha > beta )
+			{
+				return beta;
+			}
+		}
+		if( maxVal > alpha )
+		{
+			nextOrderMoveAB = bestMove;
+		}
+		return max( maxVal , alpha );
+	}
+	else if( numVacantSpots == 0 )
+	{
+		return ( float ) calculateScore ( ) ;
+	}
+	else
+	{
+		/*
+		 *this happens when level barrier reach apply suitable heuristics to proceed further
+		 */
+		 return ( float ) calculateScore ( ) ;		 
+		 //throw( "cutoff not configured !! make level = numVacantSpots" );
+
+	}
+}
+
+
+
+float minAlphaBeta( int level , float alpha1 , float beta1 ,  char color )	
+{
+	float alpha = alpha1;
+	float beta = beta1; 
+	if( level > 0 && numVacantSpots > 0 )
+	{
+		chaosMove bestMove ;
+		chaosMove tempMove ;
+		float minVal = plusInfinity;
+		for( int row = 0 ; row < N ; row++ )
+		{
+			for( int col = 0 ; col < N ; col++ )
+			{
+				if( board[row][col] == '-' )
+				{
+					tempMove.x 		= row;
+					tempMove.y 		= col;
+					tempMove.color  = color;
+					makeChaosMove(tempMove);
+
+					float tempMin = maxAlphaBeta( level-1 , alpha , beta );
+					if(tempMin < minVal)
+					{
+						minVal = tempMin;
+						bestMove = tempMove;
+					}
+					if( minVal < alpha || beta < alpha )
+						return alpha;
+					undoChaosMove( tempMove );
+				}
+				if( minVal < beta )
+				{
+					nextChaosMoveAB = bestMove ;
+				}
+				return min( beta , minVal );
+			}
+		}
+	
+
+	}
+	else if( numVacantSpots == 0 )
+	{
+		return ( float ) calculateScore ( ) ;
+	}
+	else
+	{
+		/*
+		 *this happens when level barrier reach apply suitable heuristics to proceed further
+		 */
+		 return ( float ) calculateScore ( ) ;		 
+		 //throw( "cutoff not configured !! make level = numVacantSpots" );
+
+	}
+}
+
+
+
 
 void print()
 {

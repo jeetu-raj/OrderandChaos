@@ -22,8 +22,8 @@ aiProc = None
 advStdout = None
 botname = 'bazookaC'	 # PLEASE CHOOSE A UNIQUE BOTNAME
 pathToRun = 'run.sh'
-# botname = 'bazookaPy'	 # PLEASE CHOOSE A UNIQUE BOTNAME
-# pathToRun = 'run2.sh'
+botname = 'bazookaPy'	 # PLEASE CHOOSE A UNIQUE BOTNAME
+pathToRun = 'run2.sh'
 
 # print >>sys.stderr, repr(sys.argv)
 

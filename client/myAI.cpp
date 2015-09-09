@@ -510,7 +510,6 @@ int expectiMiniMax(string nodeType,int level) // No additional parameter need to
 	TODO -- start maxSoFar , minSoFar from infinity .. define infinity
 	  Return also the configuration that returned the most optimal path.. This would be necessary in making actual move
 	  Also keep track of how many levels further down do i need to go to
-
 	  level cant get down to 0 when the node for which expectiminimax is being called is chance node
 	*/	
 	  return 1;

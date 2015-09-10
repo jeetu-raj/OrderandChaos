@@ -2,7 +2,7 @@
 
 #include "stdc++.h"
 #define FOR(i, n) for(int i=0; i<n; i++)
-#define maxLevelToSearch 7
+
 #define plusInfinity 100000.0
 #define minusInfinity -10000.0
 using namespace std;
@@ -10,8 +10,8 @@ using namespace std;
 int N;
 char board[5][5];
 int numVacantSpots;
-
-
+int maxLevelToSearch;
+std::heap<> bestNodes;
 struct orderMove
 {
 	// move from x1,y1 to x2,y2
@@ -50,8 +50,8 @@ void playAsOrder();
 void playAsChaos();
 
 bool isOk(int x,int row);
-int calculateScore();
-int scoreHelp(int row);
+int  calculateScore();
+int  scoreHelp(int row);
 
 float chance(int level);
 float maxVal(int level); // Order's move
@@ -60,6 +60,8 @@ float minVal(int level,char color);  // As of now this is not keeping track of t
 float chanceAlphaBeta ( int level , float &alpha , float &beta );
 float maxAlphaBeta( int level , float &alpha , float &beta  );
 float minAlphaBeta( int level , float &alpha , float &beta ,  char color );
+float evalOrder();
+float evalChaos();
 bool isGameOver();
 
 int main() 
@@ -83,6 +85,7 @@ void init()
 			board[i][j] = '-';
 		}
 	}
+	maxLevelToSearch = 2;
 	numVacantSpots= N*N;
 	colors.resize(N);
 	for(int i = 0;i<N;i++)
@@ -477,7 +480,8 @@ float chanceAlphaBeta ( int level , float &alpha , float &beta )
 	{
 		float tempProb = (float)(colors[i].numRemaining);
 		tempProb = tempProb / ((float)numVacantSpots);
-		expectation +=  tempProb * ( float )( minAlphaBeta ( level , alpha , beta  , colors[i].color ) );
+		if(tempProb!=0)	// No need to explore the tree for colors that are already exhausted
+			expectation +=  tempProb * ( float )( minAlphaBeta ( level , alpha , beta  , colors[i].color ) );
 	}
 	return expectation;
 }
@@ -499,6 +503,7 @@ float maxAlphaBeta( int level , float &alpha , float &beta  )
 			{
 				bestMove = allMoves[ ind ];
 				maxVal = tempVal;
+			}
  			alpha = max(alpha,maxVal);
 			if(beta <= alpha)
 				break;
@@ -594,3 +599,310 @@ void print()
 	}
 	fprintf(stderr, "-----------------------------------");
 }
+
+
+/*  CHANGES  NISHANT... 10 Sep Night...Start*/
+
+
+int numRowColWithRandomColors()
+{
+	std::vector<int> numOccurence;
+	numOccurence.resize(N,0);
+	int num=0;
+	bool flag = false;
+	char c;
+	// Finding number of favorable rows
+	for(int i=0;i<N;i++)
+	{
+		for(int j=0;j<N;j++)
+		{
+			c = board[i][j];
+			if(c!='-')
+				numOccurence[((int)c)-65]++;
+		}
+		for(int k=0;k<N;k++)
+		{
+			if(numOccurence[k]>2)
+			{
+				flag = true;
+				break;
+			}
+		}
+		numOccurence.resize(N,0);
+		if(!flag)
+		{
+			num++;
+			flag=false;
+		}
+	}
+	// Finding number of favorable colums
+	flag = false;
+	for(int i=0;i<N;i++)
+	{
+		for(int j=0;j<N;j++)
+		{
+			c = board[j][i];
+			if(c!='-')
+				numOccurence[((int)c)-65]++;
+		}
+		for(int k=0;k<N;k++)
+		{
+			if(numOccurence[k]>2)
+			{
+				flag = true;
+				break;
+			}
+		}
+		if(!flag)
+		{
+			num++;
+			flag=false;
+		}
+	}
+	return num++;
+}
+
+int numTilesInCentralPlus()
+{
+	int middle = N/2;
+	int ctr = 0;
+	for(int i=0;i<N;i++)
+	{
+		if(board[i][middle]!='-')
+			ctr++;
+		if(board[middle][i]!='-')
+			ctr++;
+	}
+	return ctr;
+}
+
+int getNumberOfPossibleOrderMoves(int x, int y)
+{
+	int possibleMoves=0;
+	orderMove temp;
+	temp.x1=x;
+	temp.y1=y;
+	int i=0;
+	for(i=x+1;i<N;i++) // Looking for moves ahead of the tile
+	{
+		if(board[i][y]=='-')
+		{
+			temp.x2 = i;
+			temp.y2 = y;
+			possibleMoves++;
+		}
+		else
+			break;
+	}
+
+	for(i=x-1;i>=0;i--) // Looking for moves behind the tile
+	{
+		if(board[i][y]=='-')
+		{
+			temp.x2 = i;
+			temp.y2 = y;
+			possibleMoves++;
+		}
+		else
+			break;
+	}
+	for(i=y+1;i<N;i++) // Looking for moves on top of the tile
+	{
+		if(board[x][i]=='-')
+		{
+			temp.x2 = x;
+			temp.y2 = i;
+			possibleMoves++;
+		}
+		else
+			break;
+	}
+
+	for(i=y-1;i>=0;i--) // Looking for moves below the tile
+	{
+		if(board[x][i]=='-')
+		{
+			temp.x2 = x;
+			temp.y2 = i;
+			possibleMoves++;
+		}
+		else
+			break;
+	}
+	return possibleMoves;
+}
+
+int getNumberOfAllPossibleOrderMoves()
+{
+	int allMoves=0;
+	for(int i=0;i<N;i++)
+	{
+		for(int j=0;j<N;j++)
+		{
+			if(board[i][j]!='-')
+			{
+				allMoves+= getPossibleOrderMoves(i,j);
+			}
+		}
+	}
+	return allMoves;
+}
+
+int separationBetweenTiles()// Returns manhattan distane between every pair of tiles
+{
+	int numIter = N*N- numVacantSpots;
+	std::vector<int> xCord;
+	std::vector<int> yCord;
+	for (int i = 0; i < N; ++i)
+	{
+		for (int j = 0; j < N; ++j)
+		{
+			if(board[i][j]!='-')
+			{
+				xCord.push_back(i);
+				yCord.push_back(j);
+			}
+		}
+	}
+	int dist =0;
+	for (int i = 0; i < numIter; ++i)
+	{
+		for (int j = i+1; j < numIter; ++j)
+		{
+			dist+= mod(xCord]i]-xCord[j])+mod(yCord[i]-yCord[j]);
+		}
+	}
+	return dist;
+}
+
+int numBadConsequtiveTiles()
+{
+	int ctr=0;
+	for (int i = 0; i < N; ++i)
+	{
+		for (int j = 0; j < N-3; ++j)
+		{
+			char c1,c2,c3;
+			c1 = board[i][j+0];
+			c2 = board[i][j+1];
+			c3 = board[i][j+2];
+			if(c1!='-' && c2!='-' && c3!='-' && c1!=c2 && c2!=c3)
+			{
+				ctr++;
+			}
+		}
+	}
+	for (int i = 0; i < N-3; ++i)
+	{
+		for (int j = 0; j < N; ++j)
+		{
+			char c1,c2,c3;
+			c1 = board[i+0][j];
+			c2 = board[i+1][j];
+			c3 = board[i+2][j];
+			if(c1!='-' && c2!='-' && c3!='-' && c1!=c2 && c2!=c3)
+			{
+				ctr++;
+			}
+		}
+	}
+	return ctr;
+}
+
+float evalChaosStart() // To be used for first few moves in the game
+{
+	std::vector<float> features;
+	std::vector<float> weights;
+	int numFeatures = 5;
+	features.resize(numFeatures,0.0);
+	weights.resize(numFeatures,0.0);
+	features[0] = numRowColWithRandomColors();
+	weights[0]  = 1.0;
+	
+	features[1] = separationBetweenTiles(); // Use this feature for early moves of chaos
+	weights[1]	= 1.0;
+
+	float score;
+	for (int i = 0; i < numFeatures; ++i)
+	{
+		score+= weights[i]*features[i];
+		/* code */
+	}
+	return score;
+}
+
+float evalChaosMiddle()// To be used for middle part of the game
+{
+	// since we are in a minimisation world.. these weights must be negative
+	std::vector<float> features;
+	std::vector<float> weights;
+	int numFeatures =10 ;
+	features.resize(numFeatures,0.0);
+	weights.resize(numFeatures),0.0;
+	features[0] = numRowColWithRandomColors();
+	weights[0]  = 1.0;
+	features[1] = calculateScore();
+	weights[1]	= 1.0;
+	
+	features[2] = numTilesInCentralPlus();
+	weights[2]	= 1.0;
+
+	// Use this feature for later half of the game
+	features[3] = getNumberOfAllPossibleOrderMoves();
+	weights[3]	= 1.0;
+
+	features[4] = separationBetweenTiles(); // Use this feature for early moves of chaos
+	weights[4]	= 1.0;
+
+}
+
+float evalChaosEnd()// To be used near death
+{
+	return calculateScore();	
+}
+
+float evalOrderStart() // To be used for first few moves in the game
+{
+	// if any move brings more than three tiles together even when they arent making any palindrome then 
+	// then that move is certainly not good.. Make a function to measure this intuition... Bringing two colors together is OK
+	float f1 = (float)numBadConsequtiveTiles();
+	return (-1)*f1;
+}
+
+float evalOrderMiddle()// To be used for middle part of the game
+{
+	// since we are in a minimisation world.. these weights must be negative
+	std::vector<float> features;
+	std::vector<float> weights;
+	int numFeatures=10;
+	features.resize(numFeatures,0.0);
+	weights.resize(numFeatures,0.0);
+	features[0] = numRowColWithRandomColors();
+	weights[0]  = 1.0;
+	features[1] = calculateScore();
+	weights[1]	= 1.0;
+	
+	features[2] = numTilesInCentralPlus();
+	weights[2]	= 1.0;
+
+	// Use this feature for later half of the game
+	features[3] = getNumberOfAllPossibleOrderMoves();
+	weights[3]	= 1.0;
+
+	features[4] = separationBetweenTiles(); // Use this feature for early moves of Order
+	weights[4]	= 1.0;
+
+	float score;
+	for (int i = 0; i < numFeatures; ++i)
+	{
+		score += weights[i]*features[i];
+	}
+	return score;
+}
+
+float evalOrderEnd()// To be used near death
+{
+	return calculateScore();
+}
+
+/*  CHANGES  NISHANT... 10 Sep Night...End*/

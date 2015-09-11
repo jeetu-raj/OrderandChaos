@@ -11,7 +11,7 @@ int N;
 char board[5][5];
 int numVacantSpots;
 int maxLevelToSearch;
-std::heap<> bestNodes;
+float alpha,beta;
 struct orderMove
 {
 	// move from x1,y1 to x2,y2
@@ -216,21 +216,23 @@ vector< orderMove > getPossibleOrderMoves(int x, int y)
  
 chaosMove findChaosMove(char color) // Use something intelligent here
 {
-	float alpha = minusInfinity;
-	float beta 	= plusInfinity ;
-	float score = minAlphaBeta(maxLevelToSearch,alpha,beta,color);	
+	alpha = minusInfinity;
+	beta 	= plusInfinity ;
+	float score1 = minAlphaBeta(maxLevelToSearch,alpha,beta,color);
 	return nextChaosMoveAB;
-	// float score = minVal(maxLevelToSearch,color);
+	// float score2 = minVal(maxLevelToSearch,color);
+	// fprintf(stderr, "Chaos:AB vs Minimax: %f,%f\n",score1,score2);	
 	// return nextChaosMove;
 }
 
 orderMove findOrderMove()
 {
-	float alpha = minusInfinity;
-	float beta 	= plusInfinity ;
-	float temp = maxAlphaBeta(maxLevelToSearch,alpha,beta);	
+	alpha = minusInfinity;
+	beta 	= plusInfinity ;
+	float temp1 = maxAlphaBeta(maxLevelToSearch,alpha,beta);	
 	return nextOrderMoveAB;
-	// float temp = maxVal(maxLevelToSearch);	
+	// float temp2 = maxVal(maxLevelToSearch);	
+	// fprintf(stderr, "Order:AB vs Minimax: %f,%f\n",temp1,temp2);	
 	// return nextOrderMove;
 }
 
@@ -480,7 +482,7 @@ float chanceAlphaBeta ( int level , float &alpha , float &beta )
 	{
 		float tempProb = (float)(colors[i].numRemaining);
 		tempProb = tempProb / ((float)numVacantSpots);
-		if(tempProb!=0)	// No need to explore the tree for colors that are already exhausted
+		if(tempProb!=0.0)	// No need to explore the tree for colors that are already exhausted
 			expectation +=  tempProb * ( float )( minAlphaBeta ( level , alpha , beta  , colors[i].color ) );
 	}
 	return expectation;
@@ -504,20 +506,17 @@ float maxAlphaBeta( int level , float &alpha , float &beta  )
 				bestMove = allMoves[ ind ];
 				maxVal = tempVal;
 			}
- 			alpha = max(alpha,maxVal);
-			if(beta <= alpha)
+ 			if(beta <= alpha)
 				break;
 
-			// if( maxVal > beta || alpha > beta )
-			// {
-			// 	return beta;
-			// }
+			if(alpha>maxVal)
+ 				alpha = maxVal;
 		}
-		// if( maxVal > alpha )
-		// {
-		// 	nextOrderMoveAB = bestMove;
-		// }
-		nextOrderMoveAB = bestMove;
+		if(level==maxLevelToSearch)
+		{
+			nextOrderMoveAB = bestMove;
+			fprintf(stderr, "Returning from maxAlphaBeta\n");
+		}
 		return maxVal;
 	}
 	else if( numVacantSpots == 0 )
@@ -555,22 +554,24 @@ float minAlphaBeta( int level , float &alpha , float &beta ,  char color )
 						minVal 		= tempMin;
 						bestMove	= tempMove;
 					}
-					beta = min(beta,minVal);
 					if(beta<=alpha)
+					{
+						row = N;
+						col = N;
 						break;
-					// if( minVal < alpha || beta < alpha )
-					// 	return alpha;
+					}
+					if(beta<minVal)
+						beta = minVal;
+					
 				}
 			}	
-				// if( minVal < beta )
-				// {
-				// 	nextChaosMoveAB = bestMove ;
-				// }
-				// return min( beta , minVal );
 		}
-		nextChaosMoveAB = bestMove;
+		if(level==maxLevelToSearch)
+		{
+			nextChaosMoveAB = bestMove;
+			fprintf(stderr, "Returning from minAlphaBeta\n");
+		}
 		return minVal;
-
 	}
 	else if( numVacantSpots == 0 )
 	{
@@ -741,7 +742,7 @@ int getNumberOfAllPossibleOrderMoves()
 		{
 			if(board[i][j]!='-')
 			{
-				allMoves+= getPossibleOrderMoves(i,j);
+				allMoves+= getNumberOfPossibleOrderMoves(i,j);
 			}
 		}
 	}
@@ -769,7 +770,7 @@ int separationBetweenTiles()// Returns manhattan distane between every pair of t
 	{
 		for (int j = i+1; j < numIter; ++j)
 		{
-			dist+= mod(xCord]i]-xCord[j])+mod(yCord[i]-yCord[j]);
+			dist+= abs(xCord[i]-xCord[j])+abs(yCord[i]-yCord[j]);
 		}
 	}
 	return dist;

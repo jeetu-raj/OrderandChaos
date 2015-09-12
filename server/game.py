@@ -307,16 +307,25 @@ def handlePremature(response, culprit):
 # lets have 2 games to be fair of sides 
 # (but what about luck on which pieces one gets?)
 def startWar(bot1, bot2):
+	f = open('ScoreSheet.txt','a')
+	f.write('----------------------------ROUND STARTS------------------------------------\n')
 	global board
+	global timers
 	scores = []
 	playBattle(bot1, bot2)
 	scores.append(calculateScore())
 	board1 = copy.deepcopy(board)
+
+	f.write('%s as ORDER: %d\n'%(bot1[2], scores[0]))
+	f.write('Timers ORDER: %.3f, CHAOS: %.3f\n'% (timers[0], timers[1]))
 	
 	print 'sides change, %s vs %s:' %(bot2[2], bot1[2])
 	playBattle(bot2, bot1)
 	scores.append(calculateScore())
 	board2 = copy.deepcopy(board)
+
+	f.write('%s as ORDER: %d\n'%(bot2[2], scores[1]))
+	f.write('Timers ORDER: %.3f, CHAOS: %.3f\n'% (timers[0], timers[1]))
 
 	if (scores[0] > scores[1]):
 		pr_blink('\tBOT: %s WINS'%bot1[2])
@@ -325,10 +334,14 @@ def startWar(bot1, bot2):
 	else:
 		pr_blink('\tDRAW')
 
+
 	print '%s as ORDER: %d'%(bot1[2], scores[0])
 	printBoardX(board1)
 	print '%s as ORDER: %d'%(bot2[2], scores[1])
 	printBoard()
+
+	f.write('----------------------------ROUND ENDS------------------------------------\n')
+	f.close()
 	print repr(scores)
 
 # optimism

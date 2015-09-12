@@ -2,5 +2,6 @@
 # python -u myAI.py
 
 # FOR c++
-g++ myAI.cpp -o p1
+# g++ myAI.cpp -o p1
 ./p1
+# rm p1

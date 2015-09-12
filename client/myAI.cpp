@@ -64,6 +64,20 @@ float evalOrder();
 float evalChaos();
 bool isGameOver();
 
+float evalOrderEnd();			// To be used near death
+float evalOrderMiddle();		// To be used for middle part of the game
+float evalOrderStart(); 		// To be used for first few moves in the game
+float evalChaosEnd();			// To be used near death
+float evalChaosMiddle();		// To be used for middle part of the game
+float evalChaosStart(); 		// To be used for first few moves in the game
+int numBadConsequtiveTiles();
+int numGoodConsequtiveTiles();
+int separationBetweenTiles();	// Returns manhattan distane between every pair of tiles
+int getNumberOfAllPossibleOrderMoves();
+int getNumberOfPossibleOrderMoves(int x, int y);
+int numTilesInCentralPlus();
+int numRowColWithRandomColors();
+
 int main() 
 {
 	cin>>N;	
@@ -85,7 +99,7 @@ void init()
 			board[i][j] = '-';
 		}
 	}
-	maxLevelToSearch = 2;
+	maxLevelToSearch = 3;
 	numVacantSpots= N*N;
 	colors.resize(N);
 	for(int i = 0;i<N;i++)
@@ -216,24 +230,42 @@ vector< orderMove > getPossibleOrderMoves(int x, int y)
  
 chaosMove findChaosMove(char color) // Use something intelligent here
 {
-	alpha = minusInfinity;
+	if(numVacantSpots >= 20)
+	{
+		maxLevelToSearch = 2;
+	}
+	else if(numVacantSpots >=5)
+	{
+		maxLevelToSearch =  3;
+	}
+	else
+	{
+		maxLevelToSearch  = 8;
+	}
+	alpha 	= minusInfinity;
 	beta 	= plusInfinity ;
 	float score1 = minAlphaBeta(maxLevelToSearch,alpha,beta,color);
 	return nextChaosMoveAB;
-	// float score2 = minVal(maxLevelToSearch,color);
-	// fprintf(stderr, "Chaos:AB vs Minimax: %f,%f\n",score1,score2);	
-	// return nextChaosMove;
 }
 
 orderMove findOrderMove()
 {
-	alpha = minusInfinity;
+	if(numVacantSpots >= 20)
+	{
+		maxLevelToSearch = 2;
+	}
+	else if(numVacantSpots >=5)
+	{
+		maxLevelToSearch =  3;
+	}
+	else
+	{
+		maxLevelToSearch  = 8;
+	}
+	alpha 	= minusInfinity;
 	beta 	= plusInfinity ;
 	float temp1 = maxAlphaBeta(maxLevelToSearch,alpha,beta);	
 	return nextOrderMoveAB;
-	// float temp2 = maxVal(maxLevelToSearch);	
-	// fprintf(stderr, "Order:AB vs Minimax: %f,%f\n",temp1,temp2);	
-	// return nextOrderMove;
 }
 
 void playAsOrder() 
@@ -254,13 +286,10 @@ void playAsOrder()
 		}
 		catch(string message)
 		{
+			fprintf(stderr, "Order could not make the move .. Move no. %d\n",i);
 			// No move available for order to make
 		}
 	}
-	// fstream file;
-	// file.open("outPut.txt",ios::out|ios::app);
-	// file<<calculateScore();
-	// file.close();
 }
 
 void playAsChaos()// Replace first mve with some intelligent start point 
@@ -285,7 +314,7 @@ void playAsChaos()// Replace first mve with some intelligent start point
 		}
 		catch(string message)
 		{
-			// fprintf(stderr, "%s\n",message);
+			fprintf(stderr, "Chaos could not make the move .. Move no. %d\n",i);
 			// No move for chaos available
 		}
 	}
@@ -515,7 +544,7 @@ float maxAlphaBeta( int level , float &alpha , float &beta  )
 		if(level==maxLevelToSearch)
 		{
 			nextOrderMoveAB = bestMove;
-			fprintf(stderr, "Returning from maxAlphaBeta\n");
+			// fprintf(stderr, "Returning from maxAlphaBeta\n");
 		}
 		return maxVal;
 	}
@@ -523,9 +552,23 @@ float maxAlphaBeta( int level , float &alpha , float &beta  )
 	{
 		return ( float ) calculateScore ( ) ;
 	}
-	else
+	else // Calculate goodness of the current configuration using cutoff
 	{
-		return ( float ) calculateScore ( ) ;		 
+		if(numVacantSpots>=20)
+		{
+			return ( float ) calculateScore ( ) ;	
+			// return	evalOrderStart();
+		}
+		else if(numVacantSpots >= 5)
+		{
+			// return ( float ) calculateScore ( ) ;	
+			return evalOrderMiddle();
+		}
+		else // This is when we are searching till game end  .. Control does not come here any time(probably)
+		{
+			return ( float ) calculateScore ( ) ;		 	
+		}
+		
 	}
 }
 
@@ -569,7 +612,7 @@ float minAlphaBeta( int level , float &alpha , float &beta ,  char color )
 		if(level==maxLevelToSearch)
 		{
 			nextChaosMoveAB = bestMove;
-			fprintf(stderr, "Returning from minAlphaBeta\n");
+			// fprintf(stderr, "Returning from minAlphaBeta\n");
 		}
 		return minVal;
 	}
@@ -577,14 +620,22 @@ float minAlphaBeta( int level , float &alpha , float &beta ,  char color )
 	{
 		return ( float ) calculateScore ( ) ;
 	}
-	else
+	else  // this happens when level barrier is reached apply suitable heuristics to proceed further
 	{
-		/*
-		 *this happens when level barrier reach apply suitable heuristics to proceed further
-		 */
-		 return ( float ) calculateScore ( ) ;		 
-		 //throw( "cutoff not configured !! make level = numVacantSpots" );
-
+		if(numVacantSpots>=20)
+		{
+			return ( float ) calculateScore ( ) ;
+			// return evalChaosStart();
+		}
+		else if (numVacantSpots >= 5)
+		{
+			// return ( float ) calculateScore ( ) ;		 	
+			return evalChaosMiddle();
+		}
+		else // This is when we are searching till game end  .. Control does not come here any time(probably)
+		{
+			return ( float ) calculateScore ( ) ;		 	
+		}
 	}
 }
 
@@ -810,24 +861,57 @@ int numBadConsequtiveTiles()
 	return ctr;
 }
 
+int numGoodConsequtiveTiles()
+{
+	int ctr=0;
+	for (int i = 0; i < N; ++i)
+	{
+		for (int j = 0; j < N-3; ++j)
+		{
+			char c1,c2,c3;
+			c1 = board[i][j+0];
+			c2 = board[i][j+1];
+			c3 = board[i][j+2];
+			if(c1!='-' && c2!='-' && c3!='-' && ( c1 == c3 || c1==c2 || c2 == c3 ) )
+			{
+				ctr++;
+			}
+		}
+	}
+	for (int i = 0; i < N-3; ++i)
+	{
+		for (int j = 0; j < N; ++j)
+		{
+			char c1,c2,c3;
+			c1 = board[i+0][j];
+			c2 = board[i+1][j];
+			c3 = board[i+2][j];
+			if(c1!='-' && c2!='-' && c3!='-' && ( c1 == c3 || c1==c2 || c2 == c3 ) )
+			{
+				ctr++;
+			}
+		}
+	}
+	return ctr;
+}
+
 float evalChaosStart() // To be used for first few moves in the game
 {
 	std::vector<float> features;
 	std::vector<float> weights;
-	int numFeatures = 5;
+	int numFeatures = 2;
 	features.resize(numFeatures,0.0);
 	weights.resize(numFeatures,0.0);
 	features[0] = numRowColWithRandomColors();
-	weights[0]  = 1.0;
+	weights[0]  = -1.0;
 	
 	features[1] = separationBetweenTiles(); // Use this feature for early moves of chaos
-	weights[1]	= 1.0;
+	weights[1]	= -1.0;
 
-	float score;
+	float score =0;
 	for (int i = 0; i < numFeatures; ++i)
 	{
 		score+= weights[i]*features[i];
-		/* code */
 	}
 	return score;
 }
@@ -837,24 +921,27 @@ float evalChaosMiddle()// To be used for middle part of the game
 	// since we are in a minimisation world.. these weights must be negative
 	std::vector<float> features;
 	std::vector<float> weights;
-	int numFeatures =10 ;
+	int numFeatures = 4 ;
 	features.resize(numFeatures,0.0);
 	weights.resize(numFeatures),0.0;
 	features[0] = numRowColWithRandomColors();
-	weights[0]  = 1.0;
+	weights[0]  = -1.0;
 	features[1] = calculateScore();
-	weights[1]	= 1.0;
+	weights[1]  = 1.0;
 	
 	features[2] = numTilesInCentralPlus();
-	weights[2]	= 1.0;
+	weights[2]  = 1.0;  // Positive weight as this is disadvantagenous for chaos to have more tiles in central plus
+						// because they do less harm (probably ) to making of palaindromes
 
-	// Use this feature for later half of the game
 	features[3] = getNumberOfAllPossibleOrderMoves();
-	weights[3]	= 1.0;
+	weights[3]  = 1.0;
 
-	features[4] = separationBetweenTiles(); // Use this feature for early moves of chaos
-	weights[4]	= 1.0;
-
+	float score =0;
+	for (int i = 0; i < numFeatures; ++i)
+	{
+		score += weights[i]*features[i];
+	}
+	return score;
 }
 
 float evalChaosEnd()// To be used near death
@@ -866,34 +953,46 @@ float evalOrderStart() // To be used for first few moves in the game
 {
 	// if any move brings more than three tiles together even when they arent making any palindrome then 
 	// then that move is certainly not good.. Make a function to measure this intuition... Bringing two colors together is OK
-	float f1 = (float)numBadConsequtiveTiles();
-	return (-1)*f1;
+	std::vector<float> features;
+	std::vector<float> weights;
+	int numFeatures = 2;
+	features.resize(numFeatures,0.0);
+	weights.resize(numFeatures,0.0);
+	features[0] = numBadConsequtiveTiles();
+	weights[0]  = -1.0;
+	
+	features[1] = numGoodConsequtiveTiles(); // Use this feature for early moves of chaos
+	weights[1]	= 1.0;
+
+	float score =0;
+	for (int i = 0; i < numFeatures; ++i)
+	{
+		score+= weights[i]*features[i];
+	}
+	return score;
 }
 
 float evalOrderMiddle()// To be used for middle part of the game
 {
-	// since we are in a minimisation world.. these weights must be negative
 	std::vector<float> features;
 	std::vector<float> weights;
-	int numFeatures=10;
+	int numFeatures = 4;
 	features.resize(numFeatures,0.0);
 	weights.resize(numFeatures,0.0);
+
 	features[0] = numRowColWithRandomColors();
-	weights[0]  = 1.0;
+	weights[0]  = -1.0;
+	
 	features[1] = calculateScore();
 	weights[1]	= 1.0;
 	
 	features[2] = numTilesInCentralPlus();
 	weights[2]	= 1.0;
 
-	// Use this feature for later half of the game
 	features[3] = getNumberOfAllPossibleOrderMoves();
 	weights[3]	= 1.0;
 
-	features[4] = separationBetweenTiles(); // Use this feature for early moves of Order
-	weights[4]	= 1.0;
-
-	float score;
+	float score =0;
 	for (int i = 0; i < numFeatures; ++i)
 	{
 		score += weights[i]*features[i];
